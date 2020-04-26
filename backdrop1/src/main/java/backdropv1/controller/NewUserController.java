@@ -21,13 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
 import backdropv1.exception.ResourceNotFoundException;
 import backdropv1.model.NewUser;
 import backdropv1.repository.NewUserRepository;
+import backdropv1.supframework.HushHash;
 
 @RestController
 @RequestMapping("/backdrop/v1")
 public class NewUserController {
 	@Autowired
 	private NewUserRepository nuRepository;
-	
+	private String rocksalt = "H@rdW@rkbe@tsT@lent";
 	
 	//get user
 	@GetMapping("queryall")
@@ -37,26 +38,40 @@ public class NewUserController {
 	
 	//get user by id
 	@GetMapping("queryuser/{userid}")
-	public ResponseEntity<NewUser> getUserById(@PathVariable(value = "userid") String usrid) throws ResourceNotFoundException   {
+	public Map<String, String> getUserById(@PathVariable(value = "userid") String usrid) throws ResourceNotFoundException   {
 		NewUser nwuser = nuRepository.findById(usrid).orElseThrow(() -> new ResourceNotFoundException("User not found for this id : "+usrid));
 		
-		return ResponseEntity.ok().body(nwuser);
+		//return ResponseEntity.ok().body(nwuser);
+		Map<String, String> responseData = new HashMap();
+		responseData.put("userid", nwuser.getUserName());
+		responseData.put("emailid", nwuser.getEmailid());
+		responseData.put("fname", nwuser.getFirstName());
+		responseData.put("lname", nwuser.getLastName());
+        return responseData;
 	  }
 	
 	//insert new User data
 	@PostMapping("usercreate")
-	public NewUser createNewUser(@Valid @RequestBody NewUser nuser) {
+	public NewUser createNewUser(@Valid @RequestBody NewUser nuser) throws Exception {
+		
+		String tmpwd = nuser.getPassWord();
+		Optional<String> hpwd = HushHash.hashPassword(tmpwd, rocksalt);
+		hpwd.ifPresent(g -> nuser.setPassWord(hpwd.get()));
+		hpwd.orElseThrow(() -> new Exception("Empty Hash Password returned"));
 		return this.nuRepository.save(nuser);
 	}
 	//update user data
 	@PutMapping("updateuser/{userid}")
-	public ResponseEntity<NewUser> updateUser(@PathVariable(value = "userid") String usrid, @Valid @RequestBody NewUser nuserDetails) throws ResourceNotFoundException {
+	public ResponseEntity<NewUser> updateUser(@PathVariable(value = "userid") String usrid, @Valid @RequestBody NewUser nuserDetails) throws Exception {
 		NewUser nuser = this.nuRepository.findById(usrid).orElseThrow(() -> new ResourceNotFoundException("User not found for this id : "+usrid));
 		nuser.setEmailid(nuserDetails.getEmailid());
 		nuser.setFirstName(nuserDetails.getFirstName());
 		nuser.setLastName(nuserDetails.getLastName());
-		nuser.setPassWord(nuserDetails.getPassWord());
-		
+		String tmpwd = nuserDetails.getPassWord();
+		Optional<String> hpwd = HushHash.hashPassword(tmpwd, rocksalt);
+		hpwd.ifPresent(g -> nuserDetails.setPassWord(hpwd.get()));
+		hpwd.orElseThrow(() -> new Exception("Empty Hash Password returned"));
+	
 		return ResponseEntity.ok().body(nuser);
 	}
 	//delete user data
