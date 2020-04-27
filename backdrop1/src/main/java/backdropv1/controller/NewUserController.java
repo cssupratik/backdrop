@@ -39,7 +39,7 @@ public class NewUserController {
 	//get user by id
 	@GetMapping("queryuser/{userid}")
 	public Map<String, String> getUserById(@PathVariable(value = "userid") String usrid) throws ResourceNotFoundException   {
-		NewUser nwuser = nuRepository.findById(usrid).orElseThrow(() -> new ResourceNotFoundException("User not found for this id : "+usrid));
+		NewUser nwuser = this.nuRepository.findById(usrid).orElseThrow(() -> new ResourceNotFoundException("User not found for this id : "+usrid));
 		
 		//return ResponseEntity.ok().body(nwuser);
 		Map<String, String> responseData = new HashMap();
@@ -52,27 +52,34 @@ public class NewUserController {
 	
 	//insert new User data
 	@PostMapping("usercreate")
-	public NewUser createNewUser(@Valid @RequestBody NewUser nuser) throws Exception {
+	public String createNewUser(@Valid @RequestBody NewUser nuser) throws Exception {
 		
 		String tmpwd = nuser.getPassWord();
 		Optional<String> hpwd = HushHash.hashPassword(tmpwd, rocksalt);
 		hpwd.ifPresent(g -> nuser.setPassWord(hpwd.get()));
 		hpwd.orElseThrow(() -> new Exception("Empty Hash Password returned"));
-		return this.nuRepository.save(nuser);
+		this.nuRepository.save(nuser);
+		return "Record inserted";
 	}
 	//update user data
 	@PutMapping("updateuser/{userid}")
-	public ResponseEntity<NewUser> updateUser(@PathVariable(value = "userid") String usrid, @Valid @RequestBody NewUser nuserDetails) throws Exception {
+	public Map<String, String> updateUser(@PathVariable(value = "userid") String usrid, @Valid @RequestBody NewUser nuserDetails) throws Exception {
 		NewUser nuser = this.nuRepository.findById(usrid).orElseThrow(() -> new ResourceNotFoundException("User not found for this id : "+usrid));
 		nuser.setEmailid(nuserDetails.getEmailid());
 		nuser.setFirstName(nuserDetails.getFirstName());
 		nuser.setLastName(nuserDetails.getLastName());
+		nuser.setUserName(nuserDetails.getUserName());
 		String tmpwd = nuserDetails.getPassWord();
 		Optional<String> hpwd = HushHash.hashPassword(tmpwd, rocksalt);
-		hpwd.ifPresent(g -> nuserDetails.setPassWord(hpwd.get()));
+		hpwd.ifPresent(g -> nuser.setPassWord(hpwd.get()));
 		hpwd.orElseThrow(() -> new Exception("Empty Hash Password returned"));
-	
-		return ResponseEntity.ok().body(nuser);
+		NewUser updatednuser = this.nuRepository.save(nuser);
+		Map<String, String> responseData = new HashMap();
+		responseData.put("userid", updatednuser.getUserName());
+		responseData.put("emailid", updatednuser.getEmailid());
+		responseData.put("fname", updatednuser.getFirstName());
+		responseData.put("lname", updatednuser.getLastName());
+        return responseData;
 	}
 	//delete user data
 	@DeleteMapping("deleteuser/{userid}")
