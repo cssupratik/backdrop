@@ -7,6 +7,8 @@ import java.util.Optional;
 
 import javax.validation.Valid;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -22,6 +24,7 @@ import backdropv1.exception.ResourceNotFoundException;
 import backdropv1.model.NewUser;
 import backdropv1.repository.NewUserRepository;
 import backdropv1.supframework.HushHash;
+import io.swagger.annotations.ApiOperation;
 
 @RestController
 @RequestMapping("/backdrop/v1")
@@ -29,15 +32,22 @@ public class NewUserController {
 	@Autowired
 	private NewUserRepository nuRepository;
 	private String rocksalt = "H@rdW@rkbe@tsT@lent";
+	Logger elog = LoggerFactory.getLogger(NewUserController.class);
 	
 	//get user
-	@GetMapping("queryall")
+	@GetMapping("newuser")
 	public List<NewUser> getAllUsers() {
+		//elog.debug("queryall Rest api is invoked");
+		//elog.warn("queryall Rest api is invoked");
+		elog.trace("queryall Rest api is invoked");
 		return this.nuRepository.findAll();
 	}
 	
 	//get user by id
-	@GetMapping("queryuser/{userid}")
+	@GetMapping("newuser/{userid}")
+	@ApiOperation(value = "Find User details for the given input email id",
+	notes = "Provide an existing email id and the api returns user details as Map<String,String>",
+	response = Map.class)
 	public Map<String, String> getUserById(@PathVariable(value = "userid") String usrid) throws ResourceNotFoundException   {
 		NewUser nwuser = this.nuRepository.findById(usrid).orElseThrow(() -> new ResourceNotFoundException("User not found for this id : "+usrid));
 		
@@ -51,7 +61,10 @@ public class NewUserController {
 	  }
 	
 	//insert new User data
-	@PostMapping("usercreate")
+	@PostMapping("newuser")
+	@ApiOperation(value = "Insert new user API",
+	notes = " input firstname, lastname, username, password, email id and the api insert record in database, returns String output",
+	response = String.class)
 	public String createNewUser(@Valid @RequestBody NewUser nuser) throws Exception {
 		
 		String tmpwd = nuser.getPassWord();
@@ -62,7 +75,7 @@ public class NewUserController {
 		return "Record inserted";
 	}
 	//update user data
-	@PutMapping("updateuser/{userid}")
+	@PutMapping("newuser/{userid}")
 	public Map<String, String> updateUser(@PathVariable(value = "userid") String usrid, @Valid @RequestBody NewUser nuserDetails) throws Exception {
 		NewUser nuser = this.nuRepository.findById(usrid).orElseThrow(() -> new ResourceNotFoundException("User not found for this id : "+usrid));
 		nuser.setEmailid(nuserDetails.getEmailid());
@@ -82,7 +95,10 @@ public class NewUserController {
         return responseData;
 	}
 	//delete user data
-	@DeleteMapping("deleteuser/{userid}")
+	@DeleteMapping("newuser/{userid}")
+	@ApiOperation(value = "Delete the User details for the given input email id",
+	notes = "Provide an existing email id and the api returns deleted status as Map<String,String>",
+	response = Map.class)
 	public Map<String, Boolean> deleteUser(@PathVariable (value = "userid") String usrid) throws ResourceNotFoundException {
 		NewUser nuser = this.nuRepository.findById(usrid).orElseThrow(() -> new ResourceNotFoundException("User not found for this id : "+usrid));
 		this.nuRepository.delete(nuser);
